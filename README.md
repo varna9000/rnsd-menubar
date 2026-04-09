@@ -8,11 +8,15 @@ A native macOS menu bar app for the [Reticulum Network Stack](https://reticulum.
 
 ## Features
 
-- **Auto-starts and supervises rnsd** — starts on launch, stops on quit
+- **Auto-starts and supervises rnsd** — starts on launch, stops on quit, cleans up orphaned processes
 - **Live status indicator** in the menu bar
-- **GUI wrappers** for rnstatus, rnid, rnpath, and rnprobe
-- **Nodebook** — automatically discovers and stores LXMF / NomadNet nodes from announces, grouped by type
-- **Async commands** — `rnpath lookup` and `rnprobe` run in background threads so the menu bar never freezes
+- **NomadNet page browser** — native WKWebView-based browser with back/forward navigation, micron markup rendering, and `nomadnetwork://` link support (both absolute and same-node relative links)
+- **File downloads** — `/file/` paths trigger a native Save dialog
+- **Nodebook** — searchable window with live filtering, auto-populated from network announces, sorted by announcement time with "time ago" labels. NomadNet node names are clickable to browse, with one-click link copying
+- **Network tools** — unified Network menu with path lookup, probe (auto-detects aspect from Nodebook), and a searchable path table window grouped by hop count with name resolution
+- **Searchable contact picker** — all destination pickers (probe, lookup) use a live-filtered list instead of dropdowns
+- **GUI wrappers** for rnstatus and rnid
+- **Copy/paste support** — Cmd+C/V/X/A work in all windows
 - **Self-contained `.app`** — bundles RNS and all Python dependencies; no separate install needed
 
 ## Requirements

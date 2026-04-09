@@ -25,6 +25,7 @@ a = Analysis(
     datas=[
         ('rns_icon.png', '.'),
         ('rns_menu_icon.png', '.'),
+        ('assets/web', 'assets/web'),
     ] + rns_datas,
     hiddenimports=[
         'rumps',
@@ -33,6 +34,7 @@ a = Analysis(
         'objc',
         'cryptography',
         'serial',
+        'WebKit',
     ] + rns_hiddenimports,
     hookspath=[],
     hooksconfig={},
@@ -88,5 +90,12 @@ app = BUNDLE(
         # LSUIElement = True hides the Dock icon (menu bar app only)
         'LSUIElement': True,
         'NSHighResolutionCapable': True,
+        # Register rns:// URL scheme so the OS routes links to this app
+        'CFBundleURLTypes': [
+            {
+                'CFBundleURLName': 'network.reticulum.rns',
+                'CFBundleURLSchemes': ['rns'],
+            },
+        ],
     },
 )

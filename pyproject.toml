@@ -12,6 +12,7 @@ dependencies = [
     "rns>=0.9.0",
     "rumps>=0.4.0",
     "pyobjc-framework-Cocoa>=10.0",
+    "pyobjc-framework-WebKit>=10.0",
 ]
 
 [dependency-groups]

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nomadnet Page</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+    font-size: 14px;
+    background: #1a1a1a;
+    color: #ddd;
+    padding: 1em;
+    min-height: 100vh;
+  }
+  #loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    color: #888;
+    font-size: 16px;
+  }
+  #loading .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid #333;
+    border-top-color: #888;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 1em;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading .status { margin-top: 0.5em; font-size: 13px; color: #666; }
+  #error {
+    display: none;
+    color: #e55;
+    padding: 2em;
+    text-align: center;
+  }
+  #error h2 { margin-bottom: 0.5em; }
+  #error .details { color: #999; font-size: 13px; margin-top: 0.5em; }
+  #content { display: none; }
+  #content a { color: #6af; }
+  #content a:hover { text-decoration: underline; }
+  #toolbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: #111;
+    border-bottom: 1px solid #333;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 100;
+    font-size: 13px;
+  }
+  #toolbar .url-display {
+    flex: 1;
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: "SF Mono", monospace;
+  }
+  #toolbar .url-display .scheme { color: #6af; }
+  body { padding-top: 40px; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <span class="url-display" id="urlDisplay"></span>
+</div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div>Fetching page...</div>
+  <div class="status" id="loadStatus">Resolving path</div>
+</div>
+
+<div id="error">
+  <h2>Page Load Failed</h2>
+  <div id="errorMessage"></div>
+  <div class="details" id="errorDetails"></div>
+</div>
+
+<div id="content" role="main"></div>
+
+<script src="purify.min.js"></script>
+<script src="micron-parser.js"></script>
+<script>
+(function() {
+  "use strict";
+
+  const params = new URLSearchParams(window.location.search);
+  const rnsUrl = params.get("url");
+
+  function parseRnsUrl(url) {
+    // rns://<dest_hash>[/page/<path>]
+    const m = url.match(/^rns:\/\/([0-9a-fA-F]+)(\/.*)?$/);
+    if (!m) return null;
+    const dest = m[1];
+    let path = m[2] || "/page/index.mu";
+    if (path === "/" || path === "") path = "/page/index.mu";
+    if (!path.startsWith("/page/")) path = "/page/" + path.replace(/^\//, "");
+    return { dest: dest, path: path };
+  }
+
+  function showError(msg, details) {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("error").style.display = "block";
+    document.getElementById("errorMessage").textContent = msg;
+    if (details) document.getElementById("errorDetails").textContent = details;
+  }
+
+  function updateUrlBar(url) {
+    const el = document.getElementById("urlDisplay");
+    el.innerHTML = DOMPurify.sanitize(
+      '<span class="scheme">rns://</span>' + url.replace(/^rns:\/\//, "")
+    );
+  }
+
+  function nomadnetworkToRns(href, currentDest) {
+    // Convert nomadnetwork:// URL to rns:// URL
+    // Formats: nomadnetwork://:<hash>/page/path  or  nomadnetwork://:/page/path (same node)
+    var rest = href.substring("nomadnetwork://".length);
+    if (rest.startsWith(":")) rest = rest.substring(1); // strip leading colon
+    // If path-only (no hash), prepend the current destination hash
+    if (rest === "" || rest.startsWith("/")) {
+      rest = currentDest + rest;
+    }
+    // Ensure it has a page path
+    if (rest.indexOf("/") === -1) rest += "/page/index.mu";
+    return "rns://" + rest;
+  }
+
+  function rewriteLinks(container, currentDest) {
+    // Rewrite nomadnetwork:// and rns:// links to go through the renderer
+    var links = container.querySelectorAll("a[href]");
+    links.forEach(function(a) {
+      var raw = a.getAttribute("href") || "";
+      var prop = a.href || "";
+      var title = a.getAttribute("title") || "";
+      var candidates = [raw, prop, title];
+
+      var href = null;
+      for (var ci = 0; ci < candidates.length; ci++) {
+        var c = candidates[ci];
+        if (c.startsWith("nomadnetwork://")) {
+          href = nomadnetworkToRns(c, currentDest);
+          break;
+        } else if (c.startsWith("rns://")) {
+          href = c;
+          break;
+        }
+      }
+
+      if (href) {
+        a.setAttribute("href", "/?url=" + encodeURIComponent(href));
+        a.removeAttribute("target");
+      }
+    });
+  }
+
+  if (!rnsUrl) {
+    showError("No URL provided", "Open a page via rns://dest_hash/page/path");
+    return;
+  }
+
+  const parsed = parseRnsUrl(rnsUrl);
+  if (!parsed) {
+    showError("Invalid rns:// URL", rnsUrl);
+    return;
+  }
+
+  updateUrlBar(rnsUrl);
+  document.title = "rns://" + parsed.dest.substring(0, 10) + "..." + parsed.path;
+
+  // Fetch micron source from the bridge
+  const fetchUrl = "/fetch?dest=" + encodeURIComponent(parsed.dest)
+                 + "&path=" + encodeURIComponent(parsed.path);
+
+  document.getElementById("loadStatus").textContent =
+    "Connecting to " + parsed.dest.substring(0, 12) + "...";
+
+  fetch(fetchUrl)
+    .then(function(resp) {
+      if (!resp.ok) {
+        return resp.text().then(function(t) {
+          let err;
+          try { err = JSON.parse(t); } catch(e) { err = { error: t }; }
+          throw new Error(err.error || "HTTP " + resp.status);
+        });
+      }
+      return resp.text();
+    })
+    .then(function(micron) {
+      // Detect theme preference
+      const isDark = window.matchMedia &&
+                     window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const parser = new MicronParser(isDark !== false, true);
+      const html = parser.convertMicronToHtml(micron);
+
+      const contentEl = document.getElementById("content");
+      contentEl.innerHTML = DOMPurify.sanitize(html, {
+        USE_PROFILES: { html: true },
+        ADD_ATTR: ["style", "class"]
+      });
+
+      // Apply page-level bg/fg from micron header tags
+      const colors = parser.parseHeaderTags(micron);
+      if (colors.bg && colors.bg !== "default") {
+        document.body.style.backgroundColor = "#" + colors.bg;
+      }
+      if (colors.fg && colors.fg !== "default") {
+        document.body.style.color = "#" + colors.fg;
+      }
+
+      rewriteLinks(contentEl, parsed.dest);
+
+      document.getElementById("loading").style.display = "none";
+      contentEl.style.display = "block";
+    })
+    .catch(function(err) {
+      showError(err.message, "Destination: " + parsed.dest);
+    });
+})();
+</script>
+</body>
+</html>
