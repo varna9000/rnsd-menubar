@@ -2,9 +2,13 @@
 
 A native macOS menu bar app for the [Reticulum Network Stack](https://reticulum.network/) daemon. Auto-starts `rnsd`, monitors its status, and provides one-click access to `rnstatus`, `rnid`, `rnpath`, and `rnprobe` — plus an auto-populating Nodebook of contacts discovered from network announces.
 
-<img src="assets/menu.png" width="512" alt="Menu bar app">
+<img src="assets/1.png" width="420" alt="Menu bar app">
 
-<img src="assets/rnstatus.png" width="512" alt="rnstatus output">
+<img src="assets/2.png" width="620" alt="Nodebook">
+
+<img src="assets/3.png" width="620" alt="NomadNet page browser">
+
+<img src="assets/4.png" width="420" alt="rnstatus output">
 
 ## Features
 
