@@ -23,3 +23,6 @@ gitignore
 # Logs / runtime data
 /tmp/rnsd.log
 /tmp/rnsd.err
+
+#docs
+docs/
